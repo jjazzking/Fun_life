@@ -76,7 +76,7 @@ input, select {
 /* 편집기 */
 .editor-page { height: 100vh; display: flex; flex-direction: column; padding: 12px 16px; gap: 8px; }
 .editor-page.loading { align-items: center; justify-content: center; }
-.editor-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.editor-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-right: 110px; }
 .editor-header h2 { margin: 0; font-size: 20px; }
 .status { font-size: 13px; color: var(--muted); }
 .status.complete, .status.via-money { color: var(--fun); font-weight: 600; }

@@ -55,7 +55,7 @@ export function CardListPage() {
   return (
     <main className="list-page">
       <header>
-        <h1>Fun Life</h1>
+        <h1>재미있는 삶</h1>
         <p className="subtitle">어떤 행동이든, 그 행동 자체가 주는 것을 따라가면 재미에 닿는다.</p>
         {actionCards.length > 0 && (
           <button className="schema-link" onClick={() => navigate('/schema')}>
