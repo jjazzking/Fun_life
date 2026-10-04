@@ -1,12 +1,12 @@
 /**
- * 규칙 4: '돈 / 경제적 성공' 키워드 차단.
+ * 규칙 4: 돈은 금지하지 않는다. 대신 특별하게 다룬다.
  *
- * 노드 라벨은 행동이 주는 직접적인 감정과 인간적인 효용만 담아야 한다.
- * 클라이언트에서 1차 차단하고, Supabase 연동 시 DB 트리거로 2차 차단한다
- * (supabase/schema.sql 참고).
+ * 행동 카드 안에서 돈과 관련된 박스를 만들면 그 박스는 '돈 박스'가 되고,
+ * 그 너머는 행동 카드와 같은 계층의 '돈 카드' 하나에서 따로 재미까지 이어야 한다.
+ * 이 파일은 텍스트가 돈/경제적 성공에 관한 것인지 판별만 한다.
  */
 
-const FORBIDDEN_TERMS: string[] = [
+const MONEY_TERMS: string[] = [
   // 한국어
   '돈', '현금', '수입', '소득', '월급', '연봉', '급여', '보너스', '부자', '재산', '재테크',
   '투자', '수익', '매출', '부업', '용돈', '저축', '자산', '주식', '코인',
@@ -21,19 +21,19 @@ const FORBIDDEN_TERMS: string[] = [
 ];
 
 /** '돈'처럼 짧은 단어가 다른 단어 일부로 쓰여도 오탐되지 않게 예외를 둔다. */
-const ALLOWED_CONTAINING: string[] = ['돈독', '돈가스', '돈까스', '코인노래', '재정비'];
+const NOT_MONEY: string[] = ['돈독', '돈가스', '돈까스', '코인노래', '재정비'];
 
 function normalize(text: string): string {
   return text.toLowerCase().replace(/[\s\-_.·,]/g, '');
 }
 
-/** 금지어가 있으면 해당 단어를, 없으면 null을 반환 */
-export function findForbiddenTerm(text: string): string | null {
+/** 돈 관련 단어가 있으면 해당 단어를, 없으면 null을 반환 */
+export function findMoneyTerm(text: string): string | null {
   let normalized = normalize(text);
-  for (const allowed of ALLOWED_CONTAINING) {
+  for (const allowed of NOT_MONEY) {
     normalized = normalized.split(allowed).join('');
   }
-  for (const term of FORBIDDEN_TERMS) {
+  for (const term of MONEY_TERMS) {
     if (normalized.includes(normalize(term))) return term;
   }
   return null;

@@ -8,6 +8,7 @@
   --fun: #e0743b;
   --emotion: #b4497a;
   --utility: #3a8a6e;
+  --money: #b8902b;
   --error: #c0392b;
   font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   color: var(--text);
@@ -42,7 +43,9 @@ input, select {
   border-radius: 8px;
   padding: 8px 12px;
 }
-.error { color: var(--error); font-size: 14px; margin: 8px 0 0; }
+.error, .info { font-size: 14px; margin: 0; }
+.error { color: var(--error); }
+.info { color: var(--money); }
 
 /* 목록 */
 .list-page { max-width: 760px; margin: 0 auto; padding: 48px 16px; }
@@ -61,6 +64,9 @@ input, select {
 }
 .card-open span { color: var(--muted); font-size: 13px; }
 .card.done .card-open { border-color: var(--fun); }
+.card.money .card-open { border-style: dashed; border-color: var(--money); }
+.card.money.done .card-open { border-style: solid; }
+.card-kind { color: var(--money) !important; font-size: 11px !important; font-weight: 600; }
 .card-remove {
   position: absolute; top: 6px; right: 6px; border: none; background: none;
   color: var(--muted); padding: 4px 8px;
@@ -72,7 +78,8 @@ input, select {
 .editor-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .editor-header h2 { margin: 0; font-size: 20px; }
 .status { font-size: 13px; color: var(--muted); }
-.status.done { color: var(--fun); font-weight: 600; }
+.status.complete, .status.via-money { color: var(--fun); font-weight: 600; }
+.status.waiting-money { color: var(--money); }
 .add-value { display: flex; gap: 8px; }
 .add-value input { flex: 1; min-width: 0; }
 .canvas { flex: 1; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
@@ -89,3 +96,8 @@ input, select {
 .meaning-node.emotion .tag { color: var(--emotion); }
 .meaning-node.utility .tag { color: var(--utility); }
 .meaning-node.value.on-path { border-color: var(--fun); }
+.meaning-node.money { border-color: var(--money); border-style: dashed; }
+.meaning-node.money .tag { color: var(--money); font-weight: 600; }
+.meaning-node.money.on-path { border-style: solid; }
+.money-link { display: block; margin-top: 4px; font-size: 11px; color: var(--money); text-decoration: none; }
+.editor-page.money .meaning-node.action { border-color: var(--money); background: var(--money); }

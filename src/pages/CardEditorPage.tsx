@@ -11,63 +11,70 @@ import {
 } from '@xyflow/react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { MeaningNodeView, type MeaningFlowNode } from '../components/MeaningNodeView';
-import { newId } from '../domain/card';
-import { findForbiddenTerm } from '../domain/forbidden';
-import {
-  CONNECTION_ERROR_MESSAGE,
-  isComplete,
-  nodesOnCompletePaths,
-  validateConnection,
-} from '../domain/graph';
-import type { ActionCard, MeaningEdge, ValueCategory } from '../domain/types';
+import { cardStatus, CARD_STATUS_LABEL, newId } from '../domain/card';
+import { CONNECTION_ERROR_MESSAGE, isComplete, nodesOnCompletePaths, validateConnection } from '../domain/graph';
+import { findMoneyTerm } from '../domain/money';
+import type { ActionCard, MeaningEdge, MeaningNode, ValueCategory } from '../domain/types';
 import { navigate } from '../router';
-import { cardRepository } from '../storage';
+import { cardRepository, ensureMoneyCard, findMoneyCard } from '../storage';
 
 const nodeTypes = { meaning: MeaningNodeView };
 
-function toFlowNodes(card: ActionCard): MeaningFlowNode[] {
+type Message = { text: string; tone: 'error' | 'info' };
+
+function toFlowNodes(card: ActionCard, moneyCardId?: string): MeaningFlowNode[] {
   return card.nodes.map((n) => ({
     id: n.id,
     type: 'meaning',
     position: n.position,
-    deletable: n.kind === 'value', // 행동/재미 박스는 지울 수 없다
-    data: { kind: n.kind, label: n.label, category: n.category, onPath: false },
+    deletable: n.kind === 'value' || n.kind === 'money', // 출발/재미 박스는 지울 수 없다
+    data: { kind: n.kind, label: n.label, category: n.category, onPath: false, moneyCardId },
   }));
 }
 
-function toFlowEdges(card: ActionCard): Edge[] {
-  return card.edges.map((e) => ({ id: e.id, source: e.source, target: e.target }));
+function toDomainNodes(nodes: MeaningFlowNode[]): MeaningNode[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    kind: n.data.kind,
+    label: n.data.label,
+    category: n.data.category,
+    position: n.position,
+  }));
 }
 
 function toDomainEdges(edges: Edge[]): MeaningEdge[] {
   return edges.map((e) => ({ id: e.id, source: e.source, target: e.target }));
 }
 
-function forbiddenMessage(term: string) {
-  return `'${term}'은(는) 쓸 수 없어요. 돈이나 경제적 성공이 아닌, 그 행동이 직접 주는 감정과 효용을 적어주세요.`;
-}
-
 export function CardEditorPage({ cardId }: { cardId: string }) {
   const [card, setCard] = useState<ActionCard | null | undefined>(undefined);
+  const [moneyCard, setMoneyCard] = useState<ActionCard | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<MeaningFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [label, setLabel] = useState('');
   const [category, setCategory] = useState<ValueCategory>('emotion');
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<Message | null>(null);
 
   useEffect(() => {
-    cardRepository.get(cardId).then((loaded) => {
+    Promise.all([cardRepository.get(cardId), findMoneyCard()]).then(([loaded, money]) => {
       setCard(loaded);
+      setMoneyCard(money);
       if (loaded) {
-        setNodes(toFlowNodes(loaded));
-        setEdges(toFlowEdges(loaded));
+        setNodes(toFlowNodes(loaded, money?.id));
+        setEdges(loaded.edges.map((e) => ({ ...e })));
       }
     });
   }, [cardId, setNodes, setEdges]);
 
+  const isActionCard = card?.kind === 'action';
+  const domainNodes = useMemo(() => toDomainNodes(nodes), [nodes]);
   const domainEdges = useMemo(() => toDomainEdges(edges), [edges]);
-  const complete = isComplete(domainEdges);
-  const onPath = useMemo(() => nodesOnCompletePaths(domainEdges), [domainEdges]);
+  const moneyComplete = !!moneyCard && isComplete(moneyCard.edges);
+  const status = card ? cardStatus({ ...card, nodes: domainNodes, edges: domainEdges }, moneyCard) : 'pending';
+  const onPath = useMemo(
+    () => nodesOnCompletePaths(domainNodes, domainEdges, moneyComplete),
+    [domainNodes, domainEdges, moneyComplete],
+  );
 
   // 완성 경로 하이라이트
   const displayNodes = useMemo(
@@ -75,11 +82,7 @@ export function CardEditorPage({ cardId }: { cardId: string }) {
     [nodes, onPath],
   );
   const displayEdges = useMemo(
-    () =>
-      edges.map((e) => ({
-        ...e,
-        animated: onPath.has(e.source) && onPath.has(e.target),
-      })),
+    () => edges.map((e) => ({ ...e, animated: onPath.has(e.source) && onPath.has(e.target) })),
     [edges, onPath],
   );
 
@@ -87,64 +90,70 @@ export function CardEditorPage({ cardId }: { cardId: string }) {
   useEffect(() => {
     if (!card) return;
     const handle = setTimeout(() => {
-      cardRepository.save({
-        ...card,
-        nodes: nodes.map((n) => ({
-          id: n.id,
-          kind: n.data.kind,
-          label: n.data.label,
-          category: n.data.category,
-          position: n.position,
-        })),
-        edges: toDomainEdges(edges),
-      });
+      cardRepository.save({ ...card, nodes: domainNodes, edges: domainEdges });
     }, 300);
     return () => clearTimeout(handle);
-  }, [card, nodes, edges]);
+  }, [card, domainNodes, domainEdges]);
 
   function handleConnect(connection: Connection) {
-    const error = validateConnection(domainEdges, connection.source, connection.target);
+    const error = validateConnection(domainNodes, domainEdges, connection.source, connection.target);
     if (error) {
-      setMessage(CONNECTION_ERROR_MESSAGE[error]);
+      setMessage({ text: CONNECTION_ERROR_MESSAGE[error], tone: 'error' });
       return;
     }
     setMessage(null);
     setEdges((eds) => addEdge({ ...connection, id: newId() }, eds));
   }
 
-  function handleAddValue(e: FormEvent) {
+  /** 행동 카드에서 돈 관련 박스는 돈 박스가 되고, 돈 카드가 없으면 만든다. */
+  async function moneyCardFor(text: string): Promise<ActionCard | null> {
+    if (!isActionCard || !findMoneyTerm(text)) return null;
+    const money = await ensureMoneyCard();
+    setMoneyCard(money);
+    return money;
+  }
+
+  const moneyNotice = (money: ActionCard): Message => ({
+    text: `돈 박스가 됐어요. 돈이 어떻게 재미로 이어지는지는 '${money.title}' 카드에서 따로 그려주세요.`,
+    tone: 'info',
+  });
+
+  async function handleAddValue(e: FormEvent) {
     e.preventDefault();
     const trimmed = label.trim();
     if (!trimmed) return;
-    const forbidden = findForbiddenTerm(trimmed);
-    if (forbidden) {
-      setMessage(forbiddenMessage(forbidden));
-      return;
-    }
-    const valueCount = nodes.filter((n) => n.data.kind === 'value').length;
+    const money = await moneyCardFor(trimmed);
+    const index = nodes.filter((n) => n.data.kind === 'value' || n.data.kind === 'money').length;
     setNodes((ns) => [
       ...ns,
       {
         id: newId(),
         type: 'meaning',
-        position: { x: 260 + (valueCount % 3) * 140, y: 40 + (valueCount % 5) * 90 },
-        data: { kind: 'value', label: trimmed, category, onPath: false },
+        position: { x: 260 + (index % 3) * 140, y: 40 + (index % 5) * 90 },
+        data: money
+          ? { kind: 'money', label: trimmed, onPath: false, moneyCardId: money.id }
+          : { kind: 'value', label: trimmed, category, onPath: false },
       },
     ]);
     setLabel('');
-    setMessage(null);
+    setMessage(money ? moneyNotice(money) : null);
   }
 
-  const handleNodeDoubleClick: NodeMouseHandler<MeaningFlowNode> = (_, node) => {
-    if (node.data.kind !== 'value') return;
+  const handleNodeDoubleClick: NodeMouseHandler<MeaningFlowNode> = async (_, node) => {
+    if (node.data.kind !== 'value' && node.data.kind !== 'money') return;
     const next = prompt('박스 내용을 수정하세요', node.data.label)?.trim();
     if (!next) return;
-    const forbidden = findForbiddenTerm(next);
-    if (forbidden) {
-      setMessage(forbiddenMessage(forbidden));
-      return;
-    }
-    setNodes((ns) => ns.map((n) => (n.id === node.id ? { ...n, data: { ...n.data, label: next } } : n)));
+    const money = await moneyCardFor(next);
+    setNodes((ns) =>
+      ns.map((n) => {
+        if (n.id !== node.id) return n;
+        if (money) return { ...n, data: { kind: 'money', label: next, onPath: false, moneyCardId: money.id } };
+        return { ...n, data: { kind: 'value', label: next, category: n.data.category ?? 'emotion', onPath: false } };
+      }),
+    );
+    // 돈 박스는 도착점이므로 나가던 선은 끊는다
+    if (money) setEdges((eds) => eds.filter((e) => e.source !== node.id));
+    setMessage(money && node.data.kind !== 'money' ? moneyNotice(money) : null);
   };
 
   if (card === undefined) return <main className="editor-page loading">불러오는 중…</main>;
@@ -158,15 +167,13 @@ export function CardEditorPage({ cardId }: { cardId: string }) {
   }
 
   return (
-    <main className="editor-page">
+    <main className={`editor-page ${card.kind}`}>
       <header className="editor-header">
         <button className="back" onClick={() => navigate('/')}>
           ← 목록
         </button>
         <h2>{card.title}</h2>
-        <span className={complete ? 'status done' : 'status'}>
-          {complete ? '재미까지 연결됐어요' : '아직 재미에 닿지 않았어요'}
-        </span>
+        <span className={`status ${status}`}>{CARD_STATUS_LABEL[status]}</span>
       </header>
 
       <form className="add-value" onSubmit={handleAddValue}>
@@ -177,12 +184,16 @@ export function CardEditorPage({ cardId }: { cardId: string }) {
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="이 행동이 주는 것 (예: 숨이 차오르는 개운함, 몸이 가벼워짐)"
+          placeholder={
+            isActionCard
+              ? '이 행동이 주는 것 (예: 숨이 차오르는 개운함, 몸이 가벼워짐)'
+              : '돈이 주는 것 (예: 하고 싶은 걸 고를 수 있는 자유, 안심)'
+          }
           maxLength={40}
         />
         <button type="submit">박스 추가</button>
       </form>
-      {message && <p className="error">{message}</p>}
+      {message && <p className={message.tone}>{message.text}</p>}
 
       <div className="canvas">
         <ReactFlow

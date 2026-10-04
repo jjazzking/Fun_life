@@ -1,3 +1,4 @@
+import { migrateCard } from '../domain/card';
 import type { ActionCard } from '../domain/types';
 import type { CardRepository } from './repository';
 
@@ -6,7 +7,7 @@ const STORAGE_KEY = 'fun-life:cards:v1';
 function readAll(): ActionCard[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ActionCard[]) : [];
+    return raw ? (JSON.parse(raw) as ActionCard[]).map(migrateCard) : [];
   } catch {
     return [];
   }
