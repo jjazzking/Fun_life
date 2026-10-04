@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CardEditorPage } from './pages/CardEditorPage';
 import { CardListPage } from './pages/CardListPage';
+import { SchemaPage } from './pages/SchemaPage';
 import { parseHash, type Route } from './router';
 
 export function App() {
@@ -12,5 +13,7 @@ export function App() {
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
 
-  return route.name === 'card' ? <CardEditorPage key={route.id} cardId={route.id} /> : <CardListPage />;
+  if (route.name === 'card') return <CardEditorPage key={route.id} cardId={route.id} />;
+  if (route.name === 'schema') return <SchemaPage />;
+  return <CardListPage />;
 }

@@ -57,6 +57,11 @@ export function CardListPage() {
       <header>
         <h1>Fun Life</h1>
         <p className="subtitle">어떤 행동이든, 그 행동 자체가 주는 것을 따라가면 재미에 닿는다.</p>
+        {actionCards.length > 0 && (
+          <button className="schema-link" onClick={() => navigate('/schema')}>
+            내 재미 도식 보기 · AI와 돌아보기 →
+          </button>
+        )}
       </header>
 
       <form className="new-card" onSubmit={handleCreate}>
