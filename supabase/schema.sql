@@ -7,7 +7,7 @@
 create table public.action_cards (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users (id) on delete cascade,
-  kind        text not null default 'action' check (kind in ('action', 'money')),
+  kind        text not null default 'action' check (kind in ('action', 'money', 'worry')),
   title       text not null check (char_length(title) between 1 and 40),
   graph       jsonb not null default '{"nodes": [], "edges": []}'::jsonb,
   created_at  timestamptz not null default now(),

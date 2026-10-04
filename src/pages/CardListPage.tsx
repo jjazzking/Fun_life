@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { cardStatus, CARD_STATUS_LABEL, createCard, type CardStatus } from '../domain/card';
+import { cardStatus, createCard, statusLabel, type CardStatus } from '../domain/card';
 import type { ActionCard } from '../domain/types';
 import { navigate } from '../router';
 import { cardRepository } from '../storage';
@@ -16,6 +16,7 @@ export function CardListPage() {
 
   const moneyCard = cards.find((c) => c.kind === 'money') ?? null;
   const actionCards = cards.filter((c) => c.kind === 'action');
+  const worryCards = cards.filter((c) => c.kind === 'worry');
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -38,9 +39,10 @@ export function CardListPage() {
       <li key={card.id} className={`card ${card.kind} ${DONE.includes(status) ? 'done' : ''}`}>
         <button className="card-open" onClick={() => navigate(`/card/${card.id}`)}>
           {card.kind === 'money' && <span className="card-kind">특별 카드</span>}
+          {card.kind === 'worry' && <span className="card-kind">걱정</span>}
           <strong>{card.title}</strong>
           <span>
-            {CARD_STATUS_LABEL[status]} · 박스 {card.nodes.length - 2}개
+            {statusLabel(status, card.kind)} · 박스 {card.nodes.length - 2}개
           </span>
         </button>
         {removable && (
@@ -79,6 +81,16 @@ export function CardListPage() {
         {moneyCard && renderCard(moneyCard, false)}
         {actionCards.map((card) => renderCard(card, true))}
       </ul>
+
+      {worryCards.length > 0 && (
+        <section className="worry-section">
+          <h2>걱정 카드</h2>
+          <p className="section-hint">
+            카드의 박스에서 걱정을 달면 여기에 생겨요. 걱정이 지키려는 것을 찾고, 그럼에도 무엇을 할지 정리해보세요.
+          </p>
+          <ul className="card-grid">{worryCards.map((card) => renderCard(card, true))}</ul>
+        </section>
+      )}
     </main>
   );
 }

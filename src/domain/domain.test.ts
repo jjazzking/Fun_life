@@ -33,7 +33,15 @@ describe('findMoneyTerm', () => {
 });
 
 describe('validateConnection', () => {
-  const nodes = [node('action', 'action'), node('fun', 'fun'), node('a'), node('b'), node('c'), node('m', 'money')];
+  const nodes = [
+    node('action', 'action'),
+    node('fun', 'fun'),
+    node('a'),
+    node('b'),
+    node('c'),
+    node('m', 'money'),
+    node('w', 'worry'),
+  ];
 
   it('출발점 → 재미 직결을 막는다', () => {
     expect(validateConnection(nodes, [], 'action', 'fun')).toBe('direct-to-fun');
@@ -47,6 +55,13 @@ describe('validateConnection', () => {
   it('돈 박스는 도착점이다', () => {
     expect(validateConnection(nodes, [], 'action', 'm')).toBeNull();
     expect(validateConnection(nodes, [], 'm', 'a')).toBe('out-of-money');
+  });
+
+  it('걱정 박스는 어느 박스에서든 이어지는 도착점이다', () => {
+    expect(validateConnection(nodes, [], 'action', 'w')).toBeNull();
+    expect(validateConnection(nodes, [], 'a', 'w')).toBeNull();
+    expect(validateConnection(nodes, [], 'w', 'a')).toBe('out-of-worry');
+    expect(validateConnection(nodes, [], 'w', 'fun')).toBe('out-of-worry');
   });
 
   it('중복과 순환을 막는다', () => {

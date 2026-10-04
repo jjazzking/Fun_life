@@ -9,6 +9,7 @@
   --emotion: #b4497a;
   --utility: #3a8a6e;
   --money: #b8902b;
+  --worry: #6f68a8;
   --error: #c0392b;
   font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   color: var(--text);
@@ -100,7 +101,27 @@ input, select {
 .meaning-node.money { border-color: var(--money); border-style: dashed; }
 .meaning-node.money .tag { color: var(--money); font-weight: 600; }
 .meaning-node.money.on-path { border-style: solid; }
-.money-link { display: block; margin-top: 4px; font-size: 11px; color: var(--money); text-decoration: none; }
+.node-link { display: block; margin-top: 4px; font-size: 11px; color: var(--money); text-decoration: none; }
+.meaning-node .note { margin-top: 4px; font-size: 12px; font-weight: 400; opacity: 0.9; }
+
+/* 걱정 */
+.meaning-node.worry { border-color: var(--worry); border-style: dashed; }
+.meaning-node.worry .tag, .meaning-node.worry .node-link { color: var(--worry); font-weight: 600; }
+.meaning-node.fact .tag { color: var(--muted); }
+.meaning-node.protects .tag { color: var(--fun); }
+.meaning-node.mine .tag { color: var(--utility); }
+.meaning-node.notMine .tag { color: var(--muted); }
+.editor-page.worry .meaning-node.action { border-color: var(--worry); background: var(--worry); }
+.editor-page.worry .meaning-node.fun { border-color: var(--text); background: var(--text); color: var(--bg); font-size: 16px; }
+.editor-page.worry .meaning-node.value.on-path { border-color: var(--worry); }
+.editor-header .card-kind { color: var(--worry) !important; font-size: 12px !important; font-weight: 600; }
+.card.worry .card-open { border-color: var(--worry); border-style: dashed; }
+.card.worry.done .card-open { border-style: solid; }
+.card.worry .card-kind { color: var(--worry) !important; }
+.worry-section { margin-top: 40px; }
+.worry-section h2 { font-size: 16px; margin: 0; }
+.section-hint { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.worry-section .card-grid { margin-top: 16px; }
 .editor-page.money .meaning-node.action { border-color: var(--money); background: var(--money); }
 
 /* 재미 도식 */

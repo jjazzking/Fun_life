@@ -85,6 +85,14 @@ export function SchemaPage() {
               <dt>돈을 거친 행동</dt>
               <dd>{summary.viaMoneyCards}</dd>
             </div>
+            {summary.worryCards > 0 && (
+              <div>
+                <dt>그럼에도에 닿은 걱정</dt>
+                <dd>
+                  {summary.resolvedWorryCards} / {summary.worryCards}
+                </dd>
+              </div>
+            )}
           </dl>
 
           <div className="actions">
