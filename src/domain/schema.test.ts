@@ -57,6 +57,7 @@ describe('buildFunSchema', () => {
       emotionBoxes: 3,
       utilityBoxes: 1,
       moneyBoxes: 1,
+      moneyRewardActions: ['야근하기'],
     });
     // 띄어쓰기만 다른 박스는 같은 것으로 본다
     expect(schema.summary.recurring).toEqual([{ label: '개운 함', cards: ['야근하기', '아침 달리기'] }]);
@@ -67,6 +68,7 @@ describe('buildFunSchema', () => {
     expect(text).toContain('- 아침 달리기 → [효용] 몸이 가벼워짐 → 재미');
     expect(text).toContain('- 야근하기 → [감정] 개운 함 → [돈] 연봉 상승');
     expect(text).toContain('아직 어디에도 잇지 못한 박스: [감정] 외로움');
+    expect(text).toContain('- 돈을 보상(도착점)으로 둔 행동: 야근하기');
     expect(buildReflectionPrompt(schema)).toContain(text);
   });
 });

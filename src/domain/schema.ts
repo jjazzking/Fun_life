@@ -39,6 +39,8 @@ export interface FunSchema {
     emotionBoxes: number;
     utilityBoxes: number;
     moneyBoxes: number;
+    /** 돈 박스를 도착점(보상)으로 둔 행동 카드 제목들 */
+    moneyRewardActions: string[];
     /** 두 개 이상의 행동 카드에 반복해서 나타난 박스 */
     recurring: RecurringBox[];
   };
@@ -126,6 +128,9 @@ export function buildFunSchema(cards: ActionCard[], now = new Date()): FunSchema
       emotionBoxes: boxes.filter((n) => n.kind === 'value' && n.category !== 'utility').length,
       utilityBoxes: boxes.filter((n) => n.kind === 'value' && n.category === 'utility').length,
       moneyBoxes: boxes.filter((n) => n.kind === 'money').length,
+      moneyRewardActions: schemaCards
+        .filter((c) => c.kind === 'action' && c.paths.some((p) => p.at(-1)?.kind === 'money'))
+        .map((c) => c.title),
       recurring: [...occurrences.values()]
         .filter((o) => o.cards.size >= 2)
         .map((o) => ({ label: o.label, cards: [...o.cards] }))
