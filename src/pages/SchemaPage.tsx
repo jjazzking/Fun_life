@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { buildReflectionPrompt, renderSchemaText } from '../domain/reflectionPrompt';
+import { buildReflectionPrompt, buildWorryPrompt, renderSchemaText, unresolvedWorries } from '../domain/reflectionPrompt';
 import { buildFunSchema } from '../domain/schema';
 import type { ActionCard } from '../domain/types';
 import { navigate } from '../router';
@@ -24,20 +24,35 @@ function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+type PromptKind = 'life' | 'worry';
+
+const PROMPT_TITLE: Record<PromptKind, string> = {
+  life: '① 지금의 삶 돌아보기',
+  worry: '② 걱정 분석과 조언',
+};
+
 export function SchemaPage() {
   const [cards, setCards] = useState<ActionCard[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [preview, setPreview] = useState<PromptKind>('life');
 
   useEffect(() => {
     cardRepository.list().then(setCards);
   }, []);
 
   const schema = useMemo(() => (cards ? buildFunSchema(cards) : null), [cards]);
-  const prompt = useMemo(() => (schema ? buildReflectionPrompt(schema) : ''), [schema]);
+  const prompts = useMemo<Record<PromptKind, string>>(
+    () => ({
+      life: schema ? buildReflectionPrompt(schema) : '',
+      worry: schema ? buildWorryPrompt(schema) : '',
+    }),
+    [schema],
+  );
 
   if (!schema) return <main className="schema-page">불러오는 중…</main>;
 
   const { summary } = schema;
+  const unresolved = unresolvedWorries(schema);
   const empty = summary.actionCards === 0;
 
   async function handleCopy(text: string, done: string) {
@@ -95,21 +110,75 @@ export function SchemaPage() {
             )}
           </dl>
 
+          {notice && <p className="info">{notice}</p>}
+
+          <div className="analyses">
+            <section className="analysis">
+              <h2>{PROMPT_TITLE.life}</h2>
+              <p>
+                나의 재미 도식이 실존주의적으로 어떤 삶을 그리고 있는지 비춰 봐요. 표류하는 곳, 금융치료의 자리, 내가 고른
+                가치와 따라온 가치를 돌아보는 질문을 받아요.
+              </p>
+              <button
+                type="submit"
+                onClick={() => handleCopy(prompts.life, '삶 돌아보기 프롬프트를 복사했어요. AI 대화창에 붙여넣어 보세요.')}
+              >
+                프롬프트 복사
+              </button>
+            </section>
+
+            <section className="analysis">
+              <h2>{PROMPT_TITLE.worry}</h2>
+              <p>
+                걱정 카드를 사실과 해석, 가능성과 영향, 내 몫과 내 몫 아님으로 객관적으로 나눠 보고, 이번 주에 할 수 있는
+                일과 그럼에도 후보를 조언받아요.
+              </p>
+              {summary.worryCards > 0 ? (
+                <>
+                  <p className="analysis-meta">
+                    걱정 {summary.worryCards}개 · 아직 해소되지 않은 걱정 {unresolved.length}개
+                  </p>
+                  <button
+                    type="submit"
+                    onClick={() => handleCopy(prompts.worry, '걱정 분석 프롬프트를 복사했어요. AI 대화창에 붙여넣어 보세요.')}
+                  >
+                    프롬프트 복사
+                  </button>
+                </>
+              ) : (
+                <p className="analysis-meta">
+                  아직 걱정 카드가 없어요. 카드의 박스에서 '걱정'을 골라 박스를 만들면 걱정 카드가 생겨요.
+                </p>
+              )}
+            </section>
+          </div>
+
           <div className="actions">
-            <button type="submit" onClick={() => handleCopy(prompt, 'AI 성찰 프롬프트를 복사했어요. AI 대화창에 붙여넣어 보세요.')}>
-              AI 성찰 프롬프트 복사
-            </button>
             <button onClick={handleDownload}>데이터 내려받기 (JSON)</button>
             <button onClick={() => handleCopy(renderSchemaText(schema), '재미 도식을 텍스트로 복사했어요.')}>도식만 텍스트로 복사</button>
           </div>
-          {notice && <p className="info">{notice}</p>}
           <p className="hint">
-            복사한 프롬프트를 Claude, ChatGPT 같은 AI 대화창에 붙여넣으세요. 데이터는 이 기기에만 저장되어 있고,
-            직접 붙여넣기 전에는 어디에도 보내지지 않아요.
+            복사한 프롬프트를 Claude, ChatGPT 같은 AI 대화창에 붙여넣으세요. 두 분석은 따로따로 하는 게 좋아요. 데이터는
+            이 기기에만 저장되어 있고, 직접 붙여넣기 전에는 어디에도 보내지지 않아요.
           </p>
 
-          <h2>프롬프트 미리보기</h2>
-          <textarea className="prompt-preview" readOnly value={prompt} onFocus={(e) => e.currentTarget.select()} />
+          <div className="preview-header">
+            <h2>프롬프트 미리보기</h2>
+            <div className="tabs" role="tablist">
+              {(['life', 'worry'] as const).map((kind) => (
+                <button
+                  key={kind}
+                  role="tab"
+                  aria-selected={preview === kind}
+                  className={preview === kind ? 'tab active' : 'tab'}
+                  onClick={() => setPreview(kind)}
+                >
+                  {PROMPT_TITLE[kind]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <textarea className="prompt-preview" readOnly value={prompts[preview]} onFocus={(e) => e.currentTarget.select()} />
         </>
       )}
     </main>

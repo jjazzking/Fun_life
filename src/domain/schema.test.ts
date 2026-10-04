@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createCard, createMoneyCard, createWorryCard, statusLabel } from './card';
-import { buildReflectionPrompt, renderSchemaText } from './reflectionPrompt';
+import { buildReflectionPrompt, buildWorryPrompt, renderSchemaText, unresolvedWorries } from './reflectionPrompt';
 import { buildFunSchema } from './schema';
 import type { ActionCard, MeaningNode } from './types';
 
@@ -102,5 +102,20 @@ describe('buildFunSchema', () => {
     expect(text).toContain('- 그럼에도 나는: 천천히라도 매일 달린다');
     expect(text).toContain('- 그럼에도 나는: (아직 적지 않음)');
     expect(buildReflectionPrompt(schema)).toContain(text);
+  });
+
+  it('걱정 분석 프롬프트는 해소되지 않은 걱정을 앞에 둔다', () => {
+    expect(unresolvedWorries(schema)).toEqual(['혼자 뒤처질까']);
+    const worryPrompt = buildWorryPrompt(schema);
+    expect(worryPrompt).toContain('## 특히 봐 주었으면 하는 걱정\n- 혼자 뒤처질까');
+    expect(worryPrompt).toContain(renderSchemaText(schema));
+    expect(worryPrompt).toContain('**그럼에도 후보**');
+    // 삶 돌아보기 프롬프트는 걱정 해소를 다루지 않는다
+    const lifePrompt = buildReflectionPrompt(schema);
+    expect(lifePrompt).toContain('**걱정이 비추는 가치**');
+    expect(lifePrompt).not.toContain('그럼에도 후보');
+    // 두 프롬프트 모두 같은 앱 규칙을 담는다
+    expect(lifePrompt).toContain('## 앱의 규칙');
+    expect(worryPrompt).toContain('## 앱의 규칙');
   });
 });
